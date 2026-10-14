@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Libro de la Feria</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800&family=IBM+Plex+Mono:wght@500&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+/* Concepto: un libro de clases para la feria. Franja de fechas arriba, una hoja por grupo, y el destacador amarillo como único gesto decorativo. */
+:root{
+  --paper:#F1F3F7; --sheet:#FFFFFF; --ink:#14213D; --ink-2:#56627A; --line:#D3D9E4;
+  --primary:#1B3A6B; --on-primary:#FFFFFF; --focus:#2F63D0;
+  --hl:#FFD84D; --hl-ink:#2B2200; --hl-soft:#FFF3BF;
+  --ok:#17693F; --ok-bg:#DCF1E5; --warn:#7A4E00; --warn-bg:#FFEDC2; --bad:#A8201A; --bad-bg:#F9DAD7;
+  --f-display:'Archivo','Arial Narrow',system-ui,sans-serif;
+  --f-body:'Public Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D1422; --sheet:#162033; --ink:#E9EEF7; --ink-2:#9DA9C0; --line:#2B3853;
+    --primary:#8FB1F2; --on-primary:#0B1426; --focus:#8FB1F2;
+    --hl:#FFD84D; --hl-ink:#2B2200; --hl-soft:#3A3213;
+    --ok:#7BD7A3; --ok-bg:#163828; --warn:#F3C867; --warn-bg:#3B2E10; --bad:#FF9A92; --bad-bg:#40201E;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D1422; --sheet:#162033; --ink:#E9EEF7; --ink-2:#9DA9C0; --line:#2B3853;
+  --primary:#8FB1F2; --on-primary:#0B1426; --focus:#8FB1F2;
+  --hl:#FFD84D; --hl-ink:#2B2200; --hl-soft:#3A3213;
+  --ok:#7BD7A3; --ok-bg:#163828; --warn:#F3C867; --warn-bg:#3B2E10; --bad:#FF9A92; --bad-bg:#40201E;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0}
+body{background:var(--paper);color:var(--ink);font:16px/1.45 var(--f-body);
+  padding-block:20px 72px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px))}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,p{margin:0}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+.wrap{max-width:800px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.muted{color:var(--ink-2)}
+
+/* Encabezado */
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.kicker{font:500 12px var(--f-mono);letter-spacing:.09em;text-transform:uppercase;color:var(--ink-2);margin-bottom:6px}
+.top h1{font:800 clamp(26px,7vw,34px)/1.05 var(--f-display);letter-spacing:-.02em;text-wrap:balance}
+.sync{font:500 12px var(--f-mono);display:inline-flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid var(--line);border-radius:999px;background:var(--sheet);color:var(--ink-2)}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
+.sync.local i{background:var(--warn)}
+.sync.err i{background:var(--bad)}
+
+/* Pestañas */
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--line)}
+.tab{background:none;border:0;padding:8px 4px 10px;min-height:48px;font:700 16px var(--f-display);color:var(--ink-2)}
+.tab span{padding:3px 10px;border-radius:4px}
+.tab[aria-selected="true"]{color:var(--ink)}
+.tab[aria-selected="true"] span{background:var(--hl);color:var(--hl-ink)}
+
+/* Franja de fechas */
+.days{display:flex;gap:8px;overflow-x:auto;padding:14px 2px 10px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+.day{flex:0 0 auto;scroll-snap-align:center;width:64px;padding:9px 4px 10px;background:var(--sheet);border:1px solid var(--line);border-radius:10px;text-align:center;position:relative;display:flex;flex-direction:column;align-items:center;gap:1px}
+.day.wk{margin-left:12px}
+.day .dw{font:500 11px var(--f-mono);letter-spacing:.08em;color:var(--ink-2)}
+.day .dn{font:800 22px/1.1 var(--f-display)}
+.day .dm{font-size:12px;color:var(--ink-2)}
+.day[aria-pressed="true"]{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.day[aria-pressed="true"] .dw,.day[aria-pressed="true"] .dm{color:inherit;opacity:.85}
+.day .hoy{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font:500 10px var(--f-mono);letter-spacing:.08em;background:var(--hl);color:var(--hl-ink);padding:1px 6px;border-radius:3px}
+.dsum{font:500 12px var(--f-mono);letter-spacing:.04em;color:var(--ink-2)}
+
+/* Grupos */
+.grps{display:flex;flex-wrap:wrap;gap:8px}
+.gp{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:8px 13px;border:1px solid var(--line);border-radius:10px;background:var(--sheet);font-weight:600}
+.gp small{font:500 12px var(--f-mono);color:var(--ink-2);font-variant-numeric:tabular-nums}
+.gp.full small{color:var(--ok)}
+.gp[aria-pressed="true"]{border:2px solid var(--primary);padding:7px 12px}
+
+/* Hoja de registro */
+.sheet{background:var(--sheet);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.sh-head{padding:16px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:12px}
+.sh-sub{font:500 12px var(--f-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--ink-2);margin-bottom:4px}
+.sh-head h2,.empty h2{font:800 22px/1.15 var(--f-display);letter-spacing:-.01em;text-wrap:balance}
+.counts,.acts{display:flex;flex-wrap:wrap;gap:8px}
+.cnt{padding:6px 11px;border-radius:8px;background:var(--paper);font-size:14px;font-variant-numeric:tabular-nums}
+.cnt b{font:800 16px var(--f-display)}
+.btn{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--sheet);font-weight:600}
+.btn.pri{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.btn.bad{color:var(--bad);border-color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.mem{padding:16px;border-bottom:1px solid var(--line);display:grid;gap:12px}
+.mname{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font:700 17px var(--f-display)}
+.tag{font:500 10px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;background:var(--hl);color:var(--hl-ink);padding:2px 6px;border-radius:3px}
+.fld{width:100%;min-height:44px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+.fld::placeholder{color:var(--ink-2);opacity:.85}
+.fld:disabled{opacity:.6}
+textarea.fld{min-height:104px;resize:vertical}
+.marks{display:grid;gap:12px}
+@media (min-width:560px){.marks{grid-template-columns:1fr 1fr}}
+.lbl{display:block;font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);margin-bottom:6px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.seg.c2{grid-template-columns:repeat(2,1fr)}
+.seg button{min-height:44px;padding:0 4px;border:1px solid var(--line);background:var(--paper);border-radius:8px;font-size:14px;font-weight:600;line-height:1.1}
+.seg button:disabled{opacity:.45;cursor:not-allowed}
+.seg button[aria-pressed="true"]{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.seg button[aria-pressed="true"][data-tone="ok"]{background:var(--ok-bg);border-color:var(--ok);color:var(--ok)}
+.seg button[aria-pressed="true"][data-tone="warn"]{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}
+.seg button[aria-pressed="true"][data-tone="bad"]{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.dnote{padding:16px;display:grid;gap:4px;background:var(--paper)}
+#copybox:empty{display:none}
+
+/* Libro (matriz) */
+.mx{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--sheet)}
+.book{border-collapse:separate;border-spacing:0;min-width:100%;font-variant-numeric:tabular-nums}
+.book th,.book td{padding:6px 4px;text-align:center;border-bottom:1px solid var(--line);min-width:56px}
+.book tr:last-child td{border-bottom:0}
+.book th:first-child,.book td:first-child{position:sticky;left:0;z-index:1;background:var(--sheet);text-align:left;min-width:120px;max-width:150px;padding-left:12px;border-right:1px solid var(--line);font-weight:600;font-size:14px}
+.book thead th{font:500 11px var(--f-mono);letter-spacing:.06em;color:var(--ink-2);text-transform:uppercase}
+.book .today{background:var(--hl-soft)}
+.book th.today{color:var(--ink)}
+.book .fut{opacity:.4}
+.hbtn{background:none;border:0;display:flex;flex-direction:column;align-items:center;gap:2px;width:100%;padding:2px 0;min-height:44px;justify-content:center}
+.hbtn b{font:700 13px var(--f-display);color:var(--ink);letter-spacing:0}
+.cell{display:inline-flex;flex-direction:column;align-items:center;gap:1px;min-width:32px;border-radius:6px;padding:3px 5px;font:700 13px/1.1 var(--f-display)}
+.cell small{font:500 11px var(--f-mono)}
+.cell.p{background:var(--ok-bg);color:var(--ok)}
+.cell.a{background:var(--bad-bg);color:var(--bad)}
+.cell.j{background:var(--warn-bg);color:var(--warn)}
+.legend{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:13px;color:var(--ink-2)}
+.card{background:var(--sheet);border:1px solid var(--line);border-radius:12px}
+.stat{display:grid;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+.stat:last-child{border-bottom:0}
+.two{display:grid;gap:12px}
+@media (min-width:560px){.two{grid-template-columns:1fr 1fr}}
+.meter{height:8px;background:var(--paper);border-radius:4px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--ok)}
+.meter.c i{background:var(--primary)}
+.nitem{padding:14px 16px;border-bottom:1px solid var(--line);display:grid;gap:6px}
+.nitem:last-child{border-bottom:0}
+.nitem ul{margin:0;padding-left:18px;font-size:14px}
+.lnk{background:none;border:0;padding:0;min-height:32px;text-align:left;font:500 12px var(--f-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--primary);text-decoration:underline}
+.h3{font:800 18px/1.2 var(--f-display)}
+
+/* Grupos / formulario */
+.grow{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+.grow:last-child{border-bottom:0}
+.grow .info{min-width:0;flex:1 1 180px}
+.grow .info b{font:700 17px var(--f-display);display:block}
+.grow .btns{display:flex;gap:8px;flex-wrap:wrap}
+.frow{display:flex;gap:8px}
+.frow .fld{flex:1;min-width:0}
+.pad{padding:16px;display:grid;gap:14px}
+.err{color:var(--bad);font-weight:600;font-size:14px}
+.empty{border:2px dashed var(--line);border-radius:12px;padding:28px 18px;display:grid;gap:12px;justify-items:center;text-align:center}
+.empty p{max-width:46ch;color:var(--ink-2)}
+.banner{padding:11px 14px;border-radius:10px;background:var(--warn-bg);color:var(--warn);font-size:14px;font-weight:500}
+.toast{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:center;pointer-events:none;
+  padding:0 max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.toast span{background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:10px;font-weight:600;font-size:14px}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap" id="app"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- Constantes y utilidades ---------- */
+var START='2026-10-01', DEFAULT_END='2026-11-27';
+var LS='feria-libro-v1', LSUI='feria-libro-ui-v1';
+var MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+var DOW=['DOM','LUN','MAR','MIÉ','JUE','VIE','SÁB'];
+var DOWL=['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+var pad=function(n){return String(n).padStart(2,'0')};
+var iso=function(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+var parse=function(s){var p=s.split('-').map(Number);return new Date(p[0],p[1]-1,p[2])};
+var fmt=function(s){var d=parse(s);return DOWL[d.getDay()].slice(0,3)+' '+d.getDate()+' '+MES[d.getMonth()]};
+var wk=function(s){var d=parse(s);d.setDate(d.getDate()-((d.getDay()+6)%7));return iso(d)};
+var esc=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+var $=function(s){return document.querySelector(s)};
+var uid=function(){return Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-4)};
+var clone=function(o){return JSON.parse(JSON.stringify(o))};
+var norm=function(g){g.members=g.members||[];g.records=g.records||{};g.notes=g.notes||{};return g};
+var plural=function(n,a,b){return n+' '+(n===1?a:b)};
+
+var ATT=[['p','Presente','ok'],['a','Ausente','bad'],['j','Justificado','warn']];
+var CMP=[['s','Cumplió','ok'],['p','En parte','warn'],['n','No cumplió','bad']];
+var TABS=[['reg','Registro'],['book','Libro'],['grp','Grupos']];
+
+/* ---------- Estado ---------- */
+var S={groups:{},config:{end:DEFAULT_END},ready:false,mode:'local',readOnly:false,status:'ok',errText:'',
+  tab:'reg',date:null,gid:null,form:null,del:null,deferred:false,centerDay:true,centerBook:true};
+var db=null, dl=null;
+var timers=new Map(), writing=new Set();
+var toastT;
+
+function toast(t){var el=$('#toast');el.innerHTML='<span>'+esc(t)+'</span>';clearTimeout(toastT);toastT=setTimeout(function(){el.innerHTML=''},2600)}
+
+function days(){
+  var out=[], endS=/^\d{4}-\d{2}-\d{2}$/.test(S.config.end||'')&&S.config.end>=START?S.config.end:START;
+  var end=parse(endS), d=parse(START);
+  for(var i=0;i<400&&d<=end;i++){var w=d.getDay();if(w>=3&&w<=5)out.push(iso(d));d.setDate(d.getDate()+1)}
+  return out;
+}
+function sorted(){return Object.keys(S.groups).map(function(k){return S.groups[k]}).sort(function(a,b){return (a.createdAt||0)-(b.createdAt||0)||String(a.name).localeCompare(String(b.name))})}
+function cur(){return S.groups[S.gid]||null}
+function ensureSel(){
+  var ds=days();
+  if(!S.date||ds.indexOf(S.date)<0){
+    var t=iso(new Date());
+    S.date=ds.indexOf(t)>=0?t:(ds.filter(function(x){return x<=t}).pop()||ds[0]);
+  }
+  if(!S.gid||!S.groups[S.gid]){var gs=sorted();S.gid=gs.length?gs[0].id:null}
+}
+function dis(){return S.readOnly?' disabled':''}
+
+function recFor(g,date,mid){g.records[date]=g.records[date]||{};g.records[date][mid]=g.records[date][mid]||{};return g.records[date][mid]}
+function tidy(g,date,mid){var d=g.records[date];if(!d)return;if(d[mid]&&!Object.keys(d[mid]).length)delete d[mid];if(!Object.keys(d).length)delete g.records[date]}
+function getRec(g,date,mid){return (g.records[date]&&g.records[date][mid])||{}}
+
+function dayStats(g,date){
+  var s={total:g.members.length,reg:0,p:0,ev:0,s:0};
+  g.members.forEach(function(m){var r=getRec(g,date,m.id);if(r.att)s.reg++;if(r.att==='p'){s.p++;if(r.cmp){s.ev++;if(r.cmp==='s')s.s++}}});
+  return s;
+}
+function memStats(g,m){
+  var reg=0,pres=0,ev=0,pts=0;
+  Object.keys(g.records).forEach(function(x){
+    var r=g.records[x][m.id];if(!r||!r.att)return;reg++;
+    if(r.att==='p'){pres++;if(r.cmp){ev++;pts+=r.cmp==='s'?1:(r.cmp==='p'?0.5:0)}}
+  });
+  return {reg:reg,pres:pres,ev:ev,a:reg?Math.round(pres/reg*100):null,c:ev?Math.round(pts/ev*100):null};
+}
+
+/* ---------- Guardado ---------- */
+function loadLocal(){
+  try{var o=JSON.parse(localStorage.getItem(LS)||'null');
+    if(o){S.groups={};Object.keys(o.groups||{}).forEach(function(k){S.groups[k]=norm(o.groups[k])});if(o.config&&o.config.end)S.config.end=o.config.end}}catch(e){}
+}
+function saveLocal(){
+  try{localStorage.setItem(LS,JSON.stringify({groups:S.groups,config:S.config}));return true}catch(e){return false}
+}
+function queueSave(key){
+  clearTimeout(timers.get(key));
+  timers.set(key,setTimeout(function(){flush(key)},400));
+  paintStatus();
+}
+function flushAll(){Array.from(timers.keys()).forEach(function(k){clearTimeout(timers.get(k));flush(k)})}
+async function flush(key){
+  timers.delete(key);
+  if(writing.has(key)){timers.set(key,setTimeout(function(){flush(key)},300));return}
+  writing.add(key);
+  try{
+    if(db){
+      if(key==='__cfg')await db.doc('config/main').set({end:S.config.end});
+      else if(S.groups[key])await db.doc('groups/'+key).set(clone(S.groups[key]));
+    }else if(!saveLocal()){throw {code:'local'}}
+    S.status='ok';
+  }catch(e){fail(e)}
+  finally{writing.delete(key);paintStatus()}
+}
+function fail(e){
+  var c=e&&e.code;
+  S.status='error';
+  S.errText=c==='invalid_argument'?'Sin permiso para guardar':c==='quota_exceeded'?'Almacenamiento lleno':c==='local'?'No se pudo guardar aquí':'No se pudo guardar';
+  if(c==='invalid_argument'||c==='revoked'){S.readOnly=true;render()}
+  paintStatus();
+}
+function statusInfo(){
+  if(!S.ready)return {cls:'local',text:'Conectando…'};
+  if(S.readOnly)return {cls:'local',text:'Solo lectura'};
+  if(S.status==='error')return {cls:'err',text:S.errText||'Error al guardar'};
+  var base=S.mode==='shared'?'Compartido':'Solo en este navegador';
+  var busy=timers.size||writing.size;
+  return {cls:S.mode==='shared'?'':'local',text:busy?base+' · guardando…':base};
+}
+function paintStatus(){
+  var el=$('#status');if(!el)return;
+  var s=statusInfo();el.className='sync '+s.cls;el.innerHTML='<i></i>'+esc(s.text);
+}
+function uiSave(){try{localStorage.setItem(LSUI,JSON.stringify({tab:S.tab,gid:S.gid}))}catch(e){}}
+function uiLoad(){try{var o=JSON.parse(localStorage.getItem(LSUI)||'null');if(o){if(o.tab&&TABS.some(function(t){return t[0]===o.tab}))S.tab=o.tab;if(o.gid)S.gid=o.gid}}catch(e){}}
+
+/* ---------- Vistas ---------- */
+function banner(){return S.readOnly?'<div class="banner">Solo puedes ver el libro. Pide al organizador permiso de colaborador para registrar asistencia y funciones.</div>':''}
+
+function emptyState(){
+  return '<div class="empty"><h2>Todavía no hay grupos</h2>'+
+  '<p>Crea un grupo por equipo: cuatro integrantes, y un equipo de cinco, contando al líder. Después registras asistencia y funciones cada miércoles, jueves y viernes desde el 1 de octubre.</p>'+
+  '<button class="btn pri" data-act="newgroup"'+dis()+'>Crear el primer grupo</button></div>';
+}
+
+function daysStrip(ds){
+  var t=iso(new Date()), prev=null;
+  return '<div class="days" role="group" aria-label="Jornadas">'+ds.map(function(x){
+    var d=parse(x), w=wk(x), cls=(prev&&w!==prev)?' wk':'';prev=w;
+    return '<button type="button" class="day'+cls+'" data-act="date" data-v="'+x+'" aria-pressed="'+(x===S.date)+'" aria-label="'+esc(fmt(x))+'">'+
+      (x===t?'<span class="hoy">HOY</span>':'')+
+      '<span class="dw">'+DOW[d.getDay()]+'</span><span class="dn">'+d.getDate()+'</span><span class="dm">'+MES[d.getMonth()]+'</span></button>';
+  }).join('')+'</div>';
+}
+function grpPills(prog){
+  return '<div class="grps" role="group" aria-label="Grupos">'+sorted().map(function(g){
+    var st=dayStats(g,S.date), full=prog&&st.total>0&&st.reg===st.total;
+    return '<button type="button" class="gp'+(full?' full':'')+'" data-act="group" data-v="'+g.id+'" aria-pressed="'+(g.id===S.gid)+'">'+esc(g.name)+
+      (prog?'<small>'+st.reg+'/'+st.total+(full?' ✓':'')+'</small>':'')+'</button>';
+  }).join('')+'</div>';
+}
+function seg(m,k,opts,val,off){
+  return '<div class="seg" role="group">'+opts.map(function(o){
+    return '<button type="button" data-act="mark" data-k="'+k+'" data-mid="'+m.id+'" data-v="'+o[0]+'" data-tone="'+o[2]+'" aria-pressed="'+(val===o[0])+'"'+(S.readOnly||off?' disabled':'')+'>'+o[1]+'</button>';
+  }).join('')+'</div>';
+}
+function memRow(g,m){
+  var r=getRec(g,S.date,m.id), d=dis();
+  return '<div class="mem"><div class="mname">'+esc(m.name)+(m.leader?'<span class="tag">Líder</span>':'')+'</div>'+
+    '<input class="fld" id="role-'+m.id+'" data-input="role" data-mid="'+m.id+'" value="'+esc(m.role||'')+'" placeholder="Función asignada (por ejemplo, atención del stand)" aria-label="Función asignada a '+esc(m.name)+'"'+d+'>'+
+    '<div class="marks"><div><span class="lbl">Asistencia</span>'+seg(m,'att',ATT,r.att,false)+'</div>'+
+    '<div><span class="lbl">Cumplió su función</span>'+seg(m,'cmp',CMP,r.cmp,r.att!=='p')+'</div></div>'+
+    '<input class="fld" id="obs-'+m.id+'" data-input="obs" data-mid="'+m.id+'" value="'+esc(r.obs||'')+'" placeholder="Observación del día" aria-label="Observación sobre '+esc(m.name)+'"'+d+'>'+
+  '</div>';
+}
+function sheet(g){
+  var st=dayStats(g,S.date), d=dis(), pend=st.total-st.reg;
+  return '<section class="sheet" aria-label="Registro de '+esc(g.name)+'">'+
+    '<div class="sh-head"><div><div class="sh-sub">'+esc(fmt(S.date))+' · '+plural(g.members.length,'integrante','integrantes')+'</div><h2>'+esc(g.name)+'</h2></div>'+
+    '<div class="counts"><span class="cnt"><b>'+st.p+'/'+st.total+'</b> presentes</span>'+
+    '<span class="cnt"><b>'+(st.ev?st.s+'/'+st.ev:'—')+'</b> cumplieron</span>'+
+    (pend>0?'<span class="cnt"><b>'+pend+'</b> sin registrar</span>':'')+'</div>'+
+    '<div class="acts"><button class="btn" data-act="allp"'+d+'>Marcar todos presentes</button><button class="btn" data-act="copy">Copiar resumen</button></div>'+
+    '<div id="copybox"></div></div>'+
+    g.members.map(function(m){return memRow(g,m)}).join('')+
+    '<div class="dnote"><label class="lbl" for="gnote">Apuntes de la jornada</label>'+
+    '<textarea id="gnote" class="fld" data-input="gnote" placeholder="Qué pasó hoy, pendientes y acuerdos del grupo"'+d+'>'+esc(g.notes[S.date]||'')+'</textarea></div></section>';
+}
+function vReg(){
+  var gs=sorted();if(!gs.length)return emptyState();
+  var tot={m:0,p:0,s:0};
+  gs.forEach(function(x){var st=dayStats(x,S.date);tot.m+=st.total;tot.p+=st.p;tot.s+=st.s});
+  return banner()+daysStrip(days())+
+    '<div class="dsum">'+plural(gs.length,'grupo','grupos')+' · '+tot.p+' de '+tot.m+' presentes · '+tot.s+' cumplieron</div>'+
+    grpPills(true)+(cur()?sheet(cur()):'');
+}
+
+function vBook(){
+  var gs=sorted();if(!gs.length)return emptyState();
+  var g=cur(), ds=days(), t=iso(new Date());
+  var head=ds.map(function(x){
+    var d=parse(x);
+    return '<th class="'+(x===t?'today':'')+(x>t?' fut':'')+'"><button type="button" class="hbtn" data-act="jump" data-date="'+x+'" aria-label="Ir a '+esc(fmt(x))+'"><span>'+DOW[d.getDay()]+'</span><b>'+d.getDate()+'/'+(d.getMonth()+1)+'</b></button></th>';
+  }).join('');
+  var rows=g.members.map(function(m){
+    return '<tr><td>'+esc(m.name)+'</td>'+ds.map(function(x){
+      var r=getRec(g,x,m.id), c=(x===t?'today':'')+(x>t?' fut':'');
+      if(!r.att)return '<td class="'+c+'"><span class="muted">·</span></td>';
+      return '<td class="'+c+'" title="'+esc(m.name+' · '+fmt(x))+'"><span class="cell '+r.att+'">'+r.att.toUpperCase()+
+        (r.att==='p'&&r.cmp?'<small>'+{s:'✓',p:'½',n:'✗'}[r.cmp]+'</small>':'')+'</span></td>';
+    }).join('')+'</tr>';
+  }).join('');
+  var stats=g.members.map(function(m){
+    var s=memStats(g,m);
+    return '<div class="stat"><div class="mname">'+esc(m.name)+(m.leader?'<span class="tag">Líder</span>':'')+'</div><div class="two">'+
+      '<div><span class="lbl">Asistencia · '+(s.a==null?'sin datos':s.a+'% ('+s.pres+' de '+s.reg+')')+'</span><div class="meter"><i style="width:'+(s.a||0)+'%"></i></div></div>'+
+      '<div><span class="lbl">Cumplimiento · '+(s.c==null?'sin datos':s.c+'%')+'</span><div class="meter c"><i style="width:'+(s.c||0)+'%"></i></div></div></div></div>';
+  }).join('');
+  var notes=ds.slice().reverse().map(function(x){
+    var n=g.notes[x]||'', obs=g.members.filter(function(m){return getRec(g,x,m.id).obs});
+    if(!n&&!obs.length)return '';
+    return '<div class="nitem"><button type="button" class="lnk" data-act="jump" data-date="'+x+'">'+esc(fmt(x))+'</button>'+
+      (n?'<p>'+esc(n)+'</p>':'')+
+      (obs.length?'<ul>'+obs.map(function(m){return '<li><b>'+esc(m.name)+':</b> '+esc(getRec(g,x,m.id).obs)+'</li>'}).join('')+'</ul>':'')+'</div>';
+  }).join('');
+  return grpPills(false)+
+    '<div><div class="sh-sub">'+esc(g.name)+' · '+plural(ds.length,'jornada','jornadas')+'</div><h2 class="h3">Asistencia y cumplimiento</h2></div>'+
+    '<div class="mx"><table class="book"><thead><tr><th>Integrante</th>'+head+'</tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<div class="legend"><span class="cell p">P</span> presente <span class="cell a">A</span> ausente <span class="cell j">J</span> justificado <span>✓ cumplió · ½ en parte · ✗ no cumplió</span></div>'+
+    '<h2 class="h3">Resumen por integrante</h2><div class="card">'+stats+'</div>'+
+    '<h2 class="h3">Apuntes</h2><div class="card">'+(notes||'<div class="nitem"><p class="muted">Aún no hay apuntes. Se escriben en la pestaña Registro.</p></div>')+'</div>'+
+    (dl?'<div class="acts"><button class="btn" data-act="export">Descargar planilla de todos los grupos (CSV)</button></div>':'');
+}
+
+function vForm(){
+  var f=S.form, n=f.members.length;
+  return '<section class="sheet"><div class="sh-head"><div><div class="sh-sub">'+(f.id?'Editar grupo':'Nuevo grupo')+'</div><h2>'+(f.id?esc(f.name||'Grupo'):'Datos del grupo')+'</h2></div></div>'+
+  '<div class="pad"><div><label class="lbl" for="f-name">Nombre del grupo</label><input class="fld" id="f-name" data-input="f-name" value="'+esc(f.name)+'" placeholder="Por ejemplo, Grupo Marketing"></div>'+
+  (!f.id?'<div><span class="lbl">Tamaño del equipo, con el líder</span><div class="seg c2" role="group"><button type="button" data-act="size" data-v="4" aria-pressed="'+(n===4)+'">4 integrantes</button><button type="button" data-act="size" data-v="5" aria-pressed="'+(n===5)+'">5 integrantes</button></div></div>':'')+
+  '<div><span class="lbl">Integrantes (el primero es el líder)</span><div style="display:grid;gap:8px">'+
+  f.members.map(function(m,i){
+    return '<div class="frow"><input class="fld" id="f-m'+i+'" data-input="f-member" data-i="'+i+'" value="'+esc(m.name)+'" placeholder="'+(i===0?'Nombre del líder':'Integrante '+(i+1))+'" aria-label="'+(i===0?'Líder':'Integrante '+(i+1))+'">'+
+      (i>0&&n>2?'<button type="button" class="btn" data-act="rmm" data-i="'+i+'" aria-label="Quitar integrante '+(i+1)+'">Quitar</button>':'')+'</div>';
+  }).join('')+'</div></div>'+
+  '<p class="muted" style="font-size:14px">'+plural(n,'integrante','integrantes')+(n!==4&&n!==5?'. Los equipos de la feria son de 4 o 5.':'.')+'</p>'+
+  (n<8?'<div><button type="button" class="btn" data-act="addm">Agregar integrante</button></div>':'')+
+  (f.err?'<p class="err" role="alert">'+esc(f.err)+'</p>':'')+
+  '<div class="acts"><button type="button" class="btn pri" data-act="save">Guardar grupo</button><button type="button" class="btn" data-act="cancel">Cancelar</button></div></div></section>';
+}
+function vGroups(){
+  if(S.form)return vForm();
+  var gs=sorted(), d=dis(), ds=days();
+  var list=gs.length?'<div class="card">'+gs.map(function(g){
+    var lead=g.members.filter(function(m){return m.leader})[0];
+    var confirming=S.del===g.id;
+    return '<div class="grow"><div class="info"><b>'+esc(g.name)+'</b><span class="muted" style="font-size:14px">'+plural(g.members.length,'integrante','integrantes')+(lead?' · Líder: '+esc(lead.name):'')+'</span></div><div class="btns">'+
+      (confirming?'<button class="btn bad" data-act="delyes"'+d+'>Eliminar con sus registros</button><button class="btn" data-act="delno">Cancelar</button>'
+        :'<button class="btn" data-act="editgroup" data-v="'+g.id+'"'+d+'>Editar</button><button class="btn bad" data-act="delgroup" data-v="'+g.id+'"'+d+'>Eliminar</button>')+
+      '</div></div>';
+  }).join('')+'</div>':emptyState();
+  var info=S.mode==='shared'
+    ?'Los datos se comparten con quienes abren este enlace con permiso de colaborador. Cada líder anota desde su teléfono.'
+    :'Este libro se guarda solo en este navegador. Para que los líderes compartan los mismos datos, el organizador comparte el enlace con permiso de colaborador y cada líder inicia sesión.';
+  return banner()+(gs.length?'<div><button class="btn pri" data-act="newgroup"'+d+'>Nuevo grupo</button></div>':'')+list+
+    '<div class="card pad"><div><label class="lbl" for="endDate">Último día de la feria</label><input type="date" class="fld" id="endDate" value="'+esc(S.config.end)+'" min="'+START+'"'+d+'></div>'+
+    '<p class="muted" style="font-size:14px">Se registran los miércoles, jueves y viernes desde el jue 1 oct 2026. Hay '+plural(ds.length,'jornada','jornadas')+' en total.</p></div>'+
+    '<p class="muted" style="font-size:14px">'+esc(info)+'</p>';
+}
+
+function shell(){
+  var s=statusInfo();
+  var body=!S.ready?'<div class="empty"><p>Abriendo el libro…</p></div>':(S.tab==='book'?vBook():S.tab==='grp'?vGroups():vReg());
+  return '<header class="top"><div><p class="kicker">Feria de Administración · Líderes</p><h1>Libro de la Feria</h1></div><div id="status" class="sync '+s.cls+'"><i></i>'+esc(s.text)+'</div></header>'+
+    '<nav class="tabs" role="tablist">'+TABS.map(function(t){return '<button type="button" class="tab" role="tab" data-act="tab" data-v="'+t[0]+'" aria-selected="'+(S.tab===t[0])+'"><span>'+t[1]+'</span></button>'}).join('')+'</nav>'+
+    '<main role="tabpanel" style="display:flex;flex-direction:column;gap:16px">'+body+'</main>';
+}
+
+function render(){
+  ensureSel();
+  var app=$('#app'), y=window.scrollY;
+  var oldDays=app.querySelector('.days'), oldMx=app.querySelector('.mx');
+  var keepDays=oldDays?oldDays.scrollLeft:null, keepMx=oldMx?oldMx.scrollLeft:null;
+  app.innerHTML=shell();
+  var strip=app.querySelector('.days');
+  if(strip){
+    var sel=strip.querySelector('.day[aria-pressed="true"]');
+    if((S.centerDay||keepDays==null)&&sel){strip.scrollLeft=sel.offsetLeft-strip.clientWidth/2+sel.offsetWidth/2}
+    else if(keepDays!=null){strip.scrollLeft=keepDays}
+    S.centerDay=false;
+  }
+  var mx=app.querySelector('.mx');
+  if(mx){
+    var col=mx.querySelector('th.today');
+    if((S.centerBook||keepMx==null)){
+      var ths=mx.querySelectorAll('thead th:not(.fut)');
+      var target=col||ths[ths.length-1];
+      if(target)mx.scrollLeft=target.offsetLeft-mx.clientWidth/2+target.offsetWidth/2;
+    }else{mx.scrollLeft=keepMx}
+    S.centerBook=false;
+  }
+  window.scrollTo(0,y);
+  S.deferred=false;
+}
+function isEditing(){
+  var a=document.activeElement;
+  return !!(a&&a!==document.body&&a.matches&&a.matches('input,textarea')&&$('#app').contains(a));
+}
+var raf=0;
+function schedRender(){
+  if(isEditing()){S.deferred=true;paintStatus();return}
+  cancelAnimationFrame(raf);raf=requestAnimationFrame(render);
+}
+
+/* ---------- Acciones ---------- */
+function openForm(g){
+  if(g)S.form={id:g.id,name:g.name,members:g.members.map(function(m){return {id:m.id,name:m.name,role:m.role||''}})};
+  else S.form={id:null,name:'',members:[0,1,2,3].map(function(){return {id:null,name:''}})};
+  S.tab='grp';S.del=null;render();
+  var f=$('#f-name');if(f)f.focus();
+}
+function saveForm(){
+  var f=S.form, name=f.name.trim();
+  if(!name){f.err='Escribe el nombre del grupo.';render();return}
+  var members=f.members.map(function(m,i){return {id:m.id||('m'+uid()),name:(m.name||'').trim()||(i===0?'Líder':'Integrante '+(i+1)),role:m.role||'',leader:i===0}});
+  var g;
+  if(f.id&&S.groups[f.id]){g=S.groups[f.id];g.name=name;g.members=members}
+  else{g=norm({id:'g'+uid(),name:name,createdAt:Date.now(),members:members});S.groups[g.id]=g;S.gid=g.id}
+  S.form=null;queueSave(g.id);render();
+}
+async function removeGroup(id){
+  clearTimeout(timers.get(id));timers.delete(id);
+  delete S.groups[id];S.del=null;ensureSel();render();
+  try{if(db)await db.doc('groups/'+id).delete();else saveLocal()}catch(e){fail(e)}
+}
+function summary(g,date){
+  var st=dayStats(g,date), L=[];
+  var who=function(f){return g.members.filter(function(m){return f(getRec(g,date,m.id))}).map(function(m){return m.name})};
+  L.push(g.name+' · '+fmt(date));
+  L.push('Presentes: '+st.p+'/'+st.total+(st.ev?' · Cumplieron su función: '+st.s+'/'+st.ev:''));
+  var a=who(function(r){return r.att==='a'}), j=who(function(r){return r.att==='j'});
+  var n=who(function(r){return r.att==='p'&&r.cmp==='n'}), p=who(function(r){return r.att==='p'&&r.cmp==='p'});
+  var s=who(function(r){return !r.att});
+  if(a.length)L.push('Ausentes: '+a.join(', '));
+  if(j.length)L.push('Justificados: '+j.join(', '));
+  if(p.length)L.push('Cumplieron en parte: '+p.join(', '));
+  if(n.length)L.push('No cumplieron: '+n.join(', '));
+  if(s.length)L.push('Sin registrar: '+s.join(', '));
+  g.members.forEach(function(m){var o=getRec(g,date,m.id).obs;if(o)L.push(m.name+': '+o)});
+  if(g.notes[date])L.push('Apuntes: '+g.notes[date]);
+  return L.join('\n');
+}
+async function doCopy(){
+  var g=cur();if(!g)return;
+  var t=summary(g,S.date);
+  try{await navigator.clipboard.writeText(t);toast('Resumen copiado')}
+  catch(e){
+    var b=$('#copybox');if(!b)return;
+    b.innerHTML='<textarea class="fld" id="cp" readonly rows="6" aria-label="Resumen para copiar">'+esc(t)+'</textarea>';
+    var ta=$('#cp');ta.focus();ta.select();
+  }
+}
+function csv(){
+  var q=function(v){var s=String(v==null?'':v);if(/^[=+\-@\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"'};
+  var A={p:'Presente',a:'Ausente',j:'Justificado'}, C={s:'Cumplió',p:'En parte',n:'No cumplió'};
+  var rows=[['Grupo','Fecha','Día','Integrante','Cargo','Función asignada','Asistencia','Cumplimiento','Observación','Apuntes de la jornada']];
+  sorted().forEach(function(g){
+    var set={};Object.keys(g.records).forEach(function(k){set[k]=1});Object.keys(g.notes).forEach(function(k){set[k]=1});
+    Object.keys(set).sort().forEach(function(dt){
+      g.members.forEach(function(m){
+        var r=getRec(g,dt,m.id);if(!r.att&&!r.obs)return;
+        rows.push([g.name,dt,DOWL[parse(dt).getDay()],m.name,m.leader?'Líder':'Integrante',m.role||'',A[r.att]||'',r.att==='p'?(C[r.cmp]||''):'',r.obs||'',g.notes[dt]||'']);
+      });
+    });
+  });
+  return '﻿'+rows.map(function(r){return r.map(q).join(';')}).join('\r\n');
+}
+async function doExport(){
+  if(!dl)return;
+  try{await dl.save({filename:'libro-feria-'+iso(new Date())+'.csv',data:csv()});toast('Planilla descargada')}
+  catch(e){if(!e||e.code!=='declined')toast('No se pudo descargar la planilla')}
+}
+
+document.addEventListener('click',function(e){
+  var b=e.target.closest('[data-act]');if(!b||b.disabled)return;
+  var a=b.dataset.act, v=b.dataset.v, g=cur();
+  switch(a){
+    case 'tab':S.tab=v;S.form=null;S.del=null;S.centerDay=true;S.centerBook=true;uiSave();render();break;
+    case 'date':S.date=v;render();break;
+    case 'group':S.gid=v;uiSave();render();break;
+    case 'jump':S.date=b.dataset.date;S.tab='reg';S.centerDay=true;uiSave();render();window.scrollTo(0,0);break;
+    case 'mark':{
+      if(!g||S.readOnly)break;
+      var r=recFor(g,S.date,b.dataset.mid), k=b.dataset.k, val=b.dataset.v;
+      if(r[k]===val)delete r[k];else r[k]=val;
+      tidy(g,S.date,b.dataset.mid);queueSave(g.id);render();break;
+    }
+    case 'allp':
+      if(!g||S.readOnly)break;
+      g.members.forEach(function(m){if(!getRec(g,S.date,m.id).att)recFor(g,S.date,m.id).att='p'});
+      queueSave(g.id);render();break;
+    case 'copy':doCopy();break;
+    case 'export':doExport();break;
+    case 'newgroup':openForm(null);break;
+    case 'editgroup':if(S.groups[v])openForm(S.groups[v]);break;
+    case 'delgroup':S.del=v;render();break;
+    case 'delno':S.del=null;render();break;
+    case 'delyes':if(S.del)removeGroup(S.del);break;
+    case 'size':{
+      var n=+v, ms=S.form.members;
+      while(ms.length<n)ms.push({id:null,name:''});
+      while(ms.length>n&&!ms[ms.length-1].name.trim())ms.pop();
+      render();break;
+    }
+    case 'addm':{S.form.members.push({id:null,name:''});render();var el=$('#f-m'+(S.form.members.length-1));if(el)el.focus();break}
+    case 'rmm':S.form.members.splice(+b.dataset.i,1);render();break;
+    case 'save':saveForm();break;
+    case 'cancel':S.form=null;render();break;
+  }
+});
+document.addEventListener('input',function(e){
+  var t=e.target, k=t.dataset&&t.dataset.input;if(!k)return;
+  if(k==='f-name'){S.form.name=t.value;return}
+  if(k==='f-member'){S.form.members[+t.dataset.i].name=t.value;return}
+  var g=cur();if(!g||S.readOnly)return;
+  var mid=t.dataset.mid;
+  if(k==='role'){var m=g.members.filter(function(x){return x.id===mid})[0];if(m){m.role=t.value;queueSave(g.id)}}
+  else if(k==='obs'){var r=recFor(g,S.date,mid);if(t.value)r.obs=t.value;else delete r.obs;tidy(g,S.date,mid);queueSave(g.id)}
+  else if(k==='gnote'){if(t.value)g.notes[S.date]=t.value;else delete g.notes[S.date];queueSave(g.id)}
+});
+document.addEventListener('change',function(e){
+  if(e.target.id==='endDate'&&!S.readOnly&&e.target.value){S.config.end=e.target.value;queueSave('__cfg');render()}
+});
+document.addEventListener('focusout',function(){
+  if(S.deferred)setTimeout(function(){if(!isEditing()){S.deferred=false;render()}},0);
+});
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')flushAll()});
+window.addEventListener('pagehide',flushAll);
+
+/* ---------- Arranque ---------- */
+uiLoad();
+render();
+(async function boot(){
+  var c=window.claude, user=null;
+  if(c&&typeof c.use==='function'){
+    try{db=await c.use('db')}catch(e){db=null}
+    try{user=await c.use('user')}catch(e){user=null}
+    try{dl=await c.use('downloads')}catch(e){dl=null}
+  }
+  if(!dl){dl={save:async function(o){var bl=new Blob([o.data],{type:'text/csv;charset=utf-8'});var u=URL.createObjectURL(bl);var a=document.createElement('a');a.href=u;a.download=o.filename;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},1000)}}}
+  if(db){
+    S.mode='shared';
+    if(user&&typeof user.can==='function'){try{if((await user.can('data.write'))===false)S.readOnly=true}catch(e){}}
+    db.collection('groups').onSnapshot(function(snap){
+      var next={};
+      snap.docs.forEach(function(d){
+        var busy=timers.has(d.id)||writing.has(d.id);
+        next[d.id]=(busy&&S.groups[d.id])?S.groups[d.id]:norm(Object.assign(clone(d.data()),{id:d.id}));
+      });
+      S.groups=next;S.ready=true;
+      if(S.groups[S.gid]==null)S.gid=null;
+      schedRender();
+    },function(err){S.ready=true;fail(err);schedRender()});
+    db.doc('config/main').onSnapshot(function(s){
+      if(s.exists){var d=s.data();if(d&&d.end&&!timers.has('__cfg')&&!writing.has('__cfg'))S.config.end=d.end}
+      schedRender();
+    },function(){});
+  }else{
+    S.mode='local';loadLocal();S.ready=true;
+    if(S.gid&&!S.groups[S.gid])S.gid=null;
+    render();
+  }
+})();
+})();
+</script>
+</body>
+</html>
